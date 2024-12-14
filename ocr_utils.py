@@ -8,9 +8,34 @@ import easyocr
 from pdf2image import convert_from_path
 import os
 import numpy as np
+import hashlib
 
+
+CACHE_DIR = "ocr_cache"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+if not os.path.exists(CACHE_DIR):
+    os.makedirs(CACHE_DIR)
+    
+    
+def get_file_hash(file_path):
+    """Generate a hash of the file content for caching purposes."""
+    hash_sha256 = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        while chunk := f.read(4096):
+            hash_sha256.update(chunk)
+    return hash_sha256.hexdigest()
 
 def extract_text_from_image_pdf(pdf_path):
+    # Generate a unique hash for the PDF based on its content
+    pdf_hash = get_file_hash(pdf_path)
+    cached_file = os.path.join(CACHE_DIR, f"{pdf_hash}.txt")
+    
+    # Check if OCR result is cached
+    if os.path.exists(cached_file):
+        print(f"OCR result for {pdf_path} already cached. Loading...")
+        with open(cached_file, "r", encoding="utf-8") as f:
+            return f.read()
+
     print("Attempting OCR on image-based PDF...")
     reader = easyocr.Reader(['fa', 'en'], gpu=False)  # Switch to CPU if GPU issues occur
 
@@ -26,11 +51,15 @@ def extract_text_from_image_pdf(pdf_path):
             # Perform OCR on the numpy array
             text = reader.readtext(image_np, detail=0, paragraph=True)
             extracted_text += f"\n--- Page {page_number} ---\n" + "\n".join(text)
+        
+        # Cache the OCR result for future use
+        with open(cached_file, "w", encoding="utf-8") as f:
+            f.write(extracted_text)
+        
         return extracted_text
     except Exception as e:
         print(f"Error during OCR processing: {e}")
         return ""
-
 
 # Check if PDF is image-based or text-based
 def extract_text_from_pdf(pdf_path):
@@ -73,29 +102,35 @@ if not os.path.exists(pdf_path):
 
 
 # Extract text from PDF
-raw_text = extract_text_from_pdf(pdf_path)
-print(raw_text)
+# raw_text = extract_text_from_pdf(pdf_path)
+dir = os.path.join(cwd,'assets','s.txt')
+with open(dir, 'r') as file:
+    content = file.read()
+    
 
-# # Step 2: Split Text into Manageable Chunks
-# text_splitter = CharacterTextSplitter(
-#     separator="\n",
-#     chunk_size=800,
-#     chunk_overlap=200,
-#     length_function=len,
-# )
-# texts = text_splitter.split_text(raw_text)
-# print(texts)
+raw_text = content
 
-# # Step 3: Create Embeddings and Vector Store
 
-# embeddings = OpenAIEmbeddings()
-# document_search = FAISS.from_texts(texts, embeddings)
+# Step 2: Split Text into Manageable Chunks
+text_splitter = CharacterTextSplitter(
+    separator="\n",
+    chunk_size=800,
+    chunk_overlap=200,
+    length_function=len,
+)
+texts = text_splitter.split_text(raw_text)
 
-# # Step 4: Create and Run QA Chain
-# chain = load_qa_chain(OpenAI(), chain_type="stuff")
 
-# query = "What is the new no-budget fiscal rule?"
-# docs = document_search.similarity_search(query)
-# response = chain.run(input_documents=docs, question=query)
+# Step 3: Create Embeddings and Vector Store
 
-# print("Response:", response)
+embeddings = OpenAIEmbeddings()
+document_search = FAISS.from_texts(texts, embeddings)
+
+# Step 4: Create and Run QA Chain
+chain = load_qa_chain(OpenAI(), chain_type="stuff")
+
+query = "این سند درباره چی هستش؟"
+docs = document_search.similarity_search(query)
+response = chain.run(input_documents=docs, question=query)
+
+print("Response:", response)
