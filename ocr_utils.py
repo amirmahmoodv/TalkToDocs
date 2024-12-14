@@ -9,6 +9,8 @@ from pdf2image import convert_from_path
 import os
 import numpy as np
 import hashlib
+import shutil
+import time
 
 
 CACHE_DIR = "ocr_cache"
@@ -90,19 +92,23 @@ os.environ["OPENAI_API_KEY"]
 
 
 # pdfreader = PdfReader(f'{pdf_dir}Autumn_Budget_2024__web_accessible_.pdf')
-pdf_dir = os.path.join(cwd, "assets", "pdf")
-pdf_path = os.path.join(pdf_dir, "1402-06-31.pdf")
+pdf_dir = os.path.join(cwd, "assets", "downloaded_pdfs")
+processed_dir = os.path.join(cwd, "assets", "processed")
+
+# Ensure the processed directory exists
+os.makedirs(processed_dir, exist_ok=True)
+
 
 # Path to PDF
 
-if not os.path.exists(pdf_path):
-    print(f"File not found: {pdf_path}")
+# if not os.path.exists(pdf_path):
+#     print(f"File not found: {pdf_path}")
     
 
 
 
 # Extract text from PDF
-raw_text = extract_text_from_pdf(pdf_path)
+# raw_text = extract_text_from_pdf(pdf_path)
 # dir = os.path.join(cwd,'assets','s.txt')
 # with open(dir, 'r') as file:
 #     content = file.read()
@@ -111,26 +117,53 @@ raw_text = extract_text_from_pdf(pdf_path)
 # raw_text = content
 
 
-# Step 2: Split Text into Manageable Chunks
-text_splitter = CharacterTextSplitter(
-    separator="\n",
-    chunk_size=800,
-    chunk_overlap=200,
-    length_function=len,
-)
-texts = text_splitter.split_text(raw_text)
+def process_pdfs(pdf_dir):
+    for filename in os.listdir(pdf_dir):
+        if filename.endswith(".pdf"):
+            pdf_path = os.path.join(pdf_dir, filename)
+            print(f"Processing: {pdf_path}")
+
+            # Extract text from PDF
+            raw_text = extract_text_from_pdf(pdf_path)
+
+            if raw_text.strip():
+                print(f"Text extracted from {filename}:\n{raw_text[:500]}...")  # Print the first 500 chars of extracted text
+            else:
+                print(f"No text found in {filename}, possibly an image-based PDF. OCR applied.")
+            
+            # Move processed PDF to the 'processed' directory
+            processed_pdf_path = os.path.join(processed_dir, filename)
+            shutil.move(pdf_path, processed_pdf_path)
+            print(f"Moved {filename} to processed directory.")
+
+            # Optional: Add a delay to avoid overwhelming the system
+            time.sleep(1)  # Sleep for 1 second between each file to manage load
+
+# Start processing PDFs
+if __name__ == "__main__":
+    process_pdfs(pdf_dir)
 
 
-# Step 3: Create Embeddings and Vector Store
+# # Step 2: Split Text into Manageable Chunks
+# text_splitter = CharacterTextSplitter(
+#     separator="\n",
+#     chunk_size=800,
+#     chunk_overlap=200,
+#     length_function=len,
+# )
+# texts = text_splitter.split_text(raw_text)
 
-embeddings = OpenAIEmbeddings()
-document_search = FAISS.from_texts(texts, embeddings)
 
-# Step 4: Create and Run QA Chain
-chain = load_qa_chain(OpenAI(), chain_type="stuff")
+# # Step 3: Create Embeddings and Vector Store
 
-query = "این سند درباره چی هستش؟"
-docs = document_search.similarity_search(query)
-response = chain.run(input_documents=docs, question=query)
+# embeddings = OpenAIEmbeddings()
+# document_search = FAISS.from_texts(texts, embeddings)
 
-print("Response:", response)
+# # Step 4: Create and Run QA Chain
+# chain = load_qa_chain(OpenAI(), chain_type="stuff")
+
+# query = "این سند درباره چی هستش؟"
+# docs = document_search.similarity_search(query)
+# response = chain.run(input_documents=docs, question=query)
+
+# print("Response:", response)
