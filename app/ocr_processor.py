@@ -100,9 +100,10 @@ os.environ["OPENAI_API_KEY"]
 # pdfreader = PdfReader(f'{pdf_dir}Autumn_Budget_2024__web_accessible_.pdf')
 pdf_dir = os.path.join(cwd, "assets", "downloaded_pdfs")
 processed_dir = os.path.join(cwd, "assets", "processed")
-print(pdf_dir)
+
 # Ensure the processed directory exists
 os.makedirs(processed_dir, exist_ok=True)
+os.makedirs(pdf_dir, exist_ok=True)
 
 
 # Path to PDF
