@@ -37,7 +37,7 @@ def extract_text_from_image_pdf(pdf_path):
             return f.read()
 
     print("Attempting OCR on image-based PDF...")
-    reader = easyocr.Reader(['fa', 'en'], gpu=False)  # Switch to CPU if GPU issues occur
+    reader = easyocr.Reader(['fa', 'en'], gpu=True)  # Switch to CPU if GPU issues occur
 
     try:
         images = convert_from_path(pdf_path)
@@ -102,13 +102,13 @@ if not os.path.exists(pdf_path):
 
 
 # Extract text from PDF
-# raw_text = extract_text_from_pdf(pdf_path)
-dir = os.path.join(cwd,'assets','s.txt')
-with open(dir, 'r') as file:
-    content = file.read()
+raw_text = extract_text_from_pdf(pdf_path)
+# dir = os.path.join(cwd,'assets','s.txt')
+# with open(dir, 'r') as file:
+#     content = file.read()
     
 
-raw_text = content
+# raw_text = content
 
 
 # Step 2: Split Text into Manageable Chunks
